@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservasi - RCTM</title>
+    <style>
+        /* Style untuk body */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* Style untuk header */
+        h1 {
+            color: #34495e;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        /* Style untuk form */
+        form {
+            background-color: #ffffff;
+            border: 1px solid #dfe6e9;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        /* Style untuk label */
+        form label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        /* Style untuk input field */
+        form input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        /* Style untuk button */
+        form button {
+            width: 100%;
+            background-color: #2980b9;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        form button:hover {
+            background-color: #21618c;
+        }
+
+        /* Style untuk token */
+        p {
+            margin-top: 20px;
+            color: #27ae60;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* Style untuk link */
+        a {
+            display: block;
+            margin-top: 10px;
+            text-align: center;
+            text-decoration: none;
+            color: #2980b9;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        a:hover {
+            color: #21618c;
+        }
+    </style>
+</head>
+<body>
+    <h1>Reservasi Menggunakan RCTM</h1>
+    <form method="POST">
+        <label for="name">Nama:</label>
+        <input type="text" name="name" id="name" required>
+        <label for="table_number">Nomor Meja:</label>
+        <input type="text" name="table_number" id="table_number" required>
+        <label for="reservation_time">Waktu:</label>
+        <input type="time" name="reservation_time" id="reservation_time" required>
+        <button type="submit">Reservasi</button>
+    </form>
+    {% if token %}
+    <p>Token Anda: {{ token }}</p>
+    <a href="/token-rctm">Validasi Token</a>
+    {% endif %}
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Validasi Token Reservasi</title>
+    <title>Validasi Token RCTM</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
         .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; }
@@ -17,7 +17,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Validasi Token Reservasi</h1>
+        <h1>Validasi Token - RCTM</h1>
 
         {% with messages = get_flashed_messages() %}
             {% if messages %}
@@ -25,14 +25,12 @@
             {% endif %}
         {% endwith %}
 
-        <form method="POST" action="/token">
+        <form method="POST">
             <label for="token">Masukkan Token Anda</label>
             <input type="text" id="token" name="token" required>
-
             <input type="submit" value="Validasi">
         </form>
 
-        <!-- Button to go back to the main page -->
         <a href="/" class="btn-back">Kembali ke Halaman Utama</a>
     </div>
 </body>
