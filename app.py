@@ -1,20 +1,21 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 import random
 import secrets
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
-from hashlib import sha256
-import os
+import logging
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 
-# Fungsi GCD dan Modulo Exponentiation
+# Logging untuk debugging
+logging.basicConfig(level=logging.DEBUG)
+
+# Fungsi GCD
 def gcd(a, b):
     while b != 0:
         a, b = b, a % b
     return a
 
+# Fungsi eksponensiasi modular
 def mod_exp(base, exp, mod):
     result = 1
     while exp > 0:
@@ -24,51 +25,80 @@ def mod_exp(base, exp, mod):
         exp //= 2
     return result
 
-# Fungsi CTR-DRBG
-def ctr_drbg(seed, length):
-    key = sha256(seed.encode()).digest()
-    counter = 0
-    random_bytes = b""
-    while len(random_bytes) < length:
-        cipher = AES.new(key, AES.MODE_ECB)
-        counter_bytes = counter.to_bytes(16, 'big')
-        random_bytes += cipher.encrypt(counter_bytes)
-        counter += 1
-    return random_bytes[:length]
+# PRNG RCTM
+def prng_rctm(seed, count):
+    results = []
+    x = seed
+    for _ in range(count):
+        x = (1103515245 * x + 12345) % (2**31 - 1)
+        results.append(x)
+    return results
 
-# Fungsi Fortuna
-def fortuna(seed_pool, length):
-    if not isinstance(seed_pool, list) or len(seed_pool) < 32:
-        raise ValueError("Seed pool must contain at least 32 random seeds")
-    hash_pool = sha256(b"".join(seed_pool)).digest()
-    key = hash_pool[:16]
-    cipher = AES.new(key, AES.MODE_CTR)
-    return cipher.encrypt(b"\x00" * length)
+# PRNG HC-MRLM
+def prng_hcmrlm(seed, count, gamma=31):
+    results = []
+    x = seed / (2**31 - 1)  # Normalisasi seed
+    for _ in range(count):
+        x = (gamma * x * (1 - x)) % 1
+        if 0.1 <= x <= 0.6:
+            x = (x * 10**10) % 1
+        results.append(int(x * (2**31 - 1)))
+    return results
 
-# Fungsi RSA
-def generate_rsa_keys(drbg_func, seed):
-    p = 61
-    q = 53
+# Fungsi untuk menghasilkan bilangan prima dari PRNG
+def generate_prime_from_prng(prng_function, seed, count):
+    numbers = prng_function(seed, count)
+    for num in numbers:
+        if is_prime(num) and num > 1:
+            return num
+    raise ValueError("Tidak ada bilangan prima yang ditemukan dalam hasil PRNG.")
+
+# Fungsi untuk memeriksa bilangan prima
+def is_prime(num):
+    if num < 2:
+        return False
+    for i in range(2, int(num**0.5) + 1):
+        if num % i == 0:
+            return False
+    return True
+
+# Fungsi untuk menghasilkan kunci RSA
+def generate_rsa_keys_with_prng(prng_function, seed):
+    p = generate_prime_from_prng(prng_function, seed, 100)
+    q = generate_prime_from_prng(prng_function, seed + 1, 100)
     n = p * q
     phi = (p - 1) * (q - 1)
-    e = int.from_bytes(drbg_func(seed, 4), 'big') % phi
+    e = random.randrange(2, phi)
     while gcd(e, phi) != 1:
-        e = int.from_bytes(drbg_func(seed, 4), 'big') % phi
+        e = random.randrange(2, phi)
     d = pow(e, -1, phi)
     return ((e, n), (d, n))
 
-public_key_ctr, private_key_ctr = generate_rsa_keys(ctr_drbg, "CTR-Seed")
-public_key_fortuna, private_key_fortuna = generate_rsa_keys(fortuna, [os.urandom(32) for _ in range(32)])
-
+# Fungsi enkripsi dan dekripsi
 def encrypt_reservation(data, key):
+    logging.debug(f"Encrypting data: {data} with key: {key}")
     e, n = key
     encrypted_data = [mod_exp(ord(char), e, n) for char in data]
-    return ''.join(f'{num:04x}' for num in encrypted_data)
+    hex_length = (n.bit_length() + 3) // 4  # Panjang hexadecimal sesuai modulus
+    result = ''.join(f'{num:0{hex_length}x}' for num in encrypted_data)
+    logging.debug(f"Encrypted data: {result}")
+    return result
 
 def decrypt_reservation(hex_data, key):
+    logging.debug(f"Decrypting data: {hex_data} with key: {key}")
     d, n = key
-    encrypted_data = [int(hex_data[i:i+4], 16) for i in range(0, len(hex_data), 4)]
-    return ''.join([chr(mod_exp(char, d, n)) for char in encrypted_data])
+    hex_length = (n.bit_length() + 3) // 4
+    encrypted_data = [int(hex_data[i:i + hex_length], 16) for i in range(0, len(hex_data), hex_length)]
+    result = ''.join([chr(mod_exp(char, d, n)) for char in encrypted_data])
+    logging.debug(f"Decrypted data: {result}")
+    return result
+
+# Inisialisasi kunci RSA
+rctm_seed = 12345
+hcmrlm_seed = 67890
+
+public_key_rctm, private_key_rctm = generate_rsa_keys_with_prng(prng_rctm, rctm_seed)
+public_key_hcmrlm, private_key_hcmrlm = generate_rsa_keys_with_prng(prng_hcmrlm, hcmrlm_seed)
 
 reservations = {}
 
@@ -76,67 +106,69 @@ reservations = {}
 def home():
     return render_template('home.html')
 
-@app.route('/reservasi-ctr', methods=['GET', 'POST'])
-def reservasi_ctr():
+@app.route('/reservasi-rctm', methods=['GET', 'POST'])
+def reservasi_rctm():
     if request.method == 'POST':
         name = request.form['name']
         table_number = request.form['table_number']
         reservation_time = request.form['reservation_time']
 
         reservation_data = f'{name},{table_number},{reservation_time}'
-        encrypted_token = encrypt_reservation(reservation_data, public_key_ctr)
+        encrypted_token = encrypt_reservation(reservation_data, public_key_rctm)
         reservations[name] = encrypted_token
         session['token'] = encrypted_token
 
-        flash('Reservasi menggunakan CTR-DRBG berhasil! Berikut adalah token Anda.')
-        return render_template('reservasi-ctr.html', token=session['token'])
+        flash('Reservasi menggunakan RCTM berhasil! Berikut adalah token Anda.')
+        return render_template('reservasi-rctm.html', token=session['token'])
 
-    return render_template('reservasi-ctr.html', token=None)
+    return render_template('reservasi-rctm.html', token=None)
 
-@app.route('/reservasi-fortuna', methods=['GET', 'POST'])
-def reservasi_fortuna():
+@app.route('/reservasi-hcmrlm', methods=['GET', 'POST'])
+def reservasi_hcmrlm():
     if request.method == 'POST':
         name = request.form['name']
         table_number = request.form['table_number']
         reservation_time = request.form['reservation_time']
 
         reservation_data = f'{name},{table_number},{reservation_time}'
-        encrypted_token = encrypt_reservation(reservation_data, public_key_fortuna)
+        encrypted_token = encrypt_reservation(reservation_data, public_key_hcmrlm)
         reservations[name] = encrypted_token
         session['token'] = encrypted_token
 
-        flash('Reservasi menggunakan Fortuna berhasil! Berikut adalah token Anda.')
-        return render_template('reservasi-fortuna.html', token=session['token'])
+        flash('Reservasi menggunakan HC-MRLM berhasil! Berikut adalah token Anda.')
+        return render_template('reservasi-hcmrlm.html', token=session['token'])
 
-    return render_template('reservasi-fortuna.html', token=None)
+    return render_template('reservasi-hcmrlm.html', token=None)
 
-@app.route('/token-ctr', methods=['GET', 'POST'])
-def validate_token_ctr():
+@app.route('/token-rctm', methods=['GET', 'POST'])
+def validate_token_rctm():
     if request.method == 'POST':
         token_input = request.form['token']
         try:
-            decrypted_data = decrypt_reservation(token_input, private_key_ctr)
+            decrypted_data = decrypt_reservation(token_input, private_key_rctm)
             name, table_number, reservation_time = decrypted_data.split(',')
             flash(f'Token valid! Reservasi untuk {name} di meja {table_number} pada {reservation_time}.')
-        except:
+        except Exception as e:
+            logging.error(f"Decryption error: {e}")
             flash('Token tidak valid atau tidak dapat didekripsi.')
-        return redirect(url_for('validate_token_ctr'))
+        return redirect(url_for('validate_token_rctm'))
 
-    return render_template('token-ctr.html')
+    return render_template('token-rctm.html')
 
-@app.route('/token-fortuna', methods=['GET', 'POST'])
-def validate_token_fortuna():
+@app.route('/token-hcmrlm', methods=['GET', 'POST'])
+def validate_token_hcmrlm():
     if request.method == 'POST':
         token_input = request.form['token']
         try:
-            decrypted_data = decrypt_reservation(token_input, private_key_fortuna)
+            decrypted_data = decrypt_reservation(token_input, private_key_hcmrlm)
             name, table_number, reservation_time = decrypted_data.split(',')
             flash(f'Token valid! Reservasi untuk {name} di meja {table_number} pada {reservation_time}.')
-        except:
+        except Exception as e:
+            logging.error(f"Decryption error: {e}")
             flash('Token tidak valid atau tidak dapat didekripsi.')
-        return redirect(url_for('validate_token_fortuna'))
+        return redirect(url_for('validate_token_hcmrlm'))
 
-    return render_template('token-fortuna.html')
+    return render_template('token-hcmrlm.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
