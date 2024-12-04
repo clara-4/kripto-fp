@@ -3,6 +3,12 @@ import random
 import secrets
 import logging
 
+import time
+import psutil
+import numpy as np
+from timeit import timeit
+
+
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 
@@ -102,6 +108,41 @@ public_key_hcmrlm, private_key_hcmrlm = generate_rsa_keys_with_prng(prng_hcmrlm,
 
 reservations = {}
 
+def benchmark_prng_with_timeit(prng_function, seed, iterations, count):
+    execution_times = []
+    cpu_usages = []
+
+    for _ in range(iterations):
+        # Awal pengukuran CPU
+        cpu_start = psutil.cpu_percent(interval=None)
+
+        # Mengukur waktu eksekusi menggunakan timeit
+        exec_time = timeit(lambda: prng_function(seed, count), number=1)
+
+        # Akhir pengukuran CPU
+        cpu_end = psutil.cpu_percent(interval=None)
+        cpu_usage = cpu_end - cpu_start
+
+        # Simpan hasil
+        execution_times.append(exec_time)
+        cpu_usages.append(cpu_usage)
+
+    # Statistik waktu eksekusi
+    avg_execution_time = np.mean(execution_times)
+    std_execution_time = np.std(execution_times)
+
+    # Statistik penggunaan CPU
+    avg_cpu_usage = np.mean(cpu_usages)
+    std_cpu_usage = np.std(cpu_usages)
+
+    return {
+        "avg_execution_time": avg_execution_time,
+        "std_execution_time": std_execution_time,
+        "avg_cpu_usage": avg_cpu_usage,
+        "std_cpu_usage": std_cpu_usage
+    }
+
+
 @app.route('/')
 def home():
     return render_template('home.html')
@@ -169,6 +210,34 @@ def validate_token_hcmrlm():
         return redirect(url_for('validate_token_hcmrlm'))
 
     return render_template('token-hcmrlm.html')
+
+@app.route('/compare', methods=['GET'])
+def compare_prng():
+    rctm_seed = 12345
+    hcmrlm_seed = 67890
+    iterations = 1000  # Jumlah iterasi benchmark
+    count = 5000      # Banyaknya bilangan yang dihasilkan per iterasi
+
+    # Benchmark untuk RCTM
+    rctm_benchmark = benchmark_prng_with_timeit(prng_rctm, rctm_seed, iterations, count)
+    # Benchmark untuk HC-MRLM
+    hcmrlm_benchmark = benchmark_prng_with_timeit(prng_hcmrlm, hcmrlm_seed, iterations, count)
+
+    # Data untuk template
+    performance = {
+        "rctm": {
+            "execution_time": f"{rctm_benchmark['avg_execution_time']:.6f} seconds",
+            "cpu_usage": f"{rctm_benchmark['avg_cpu_usage']:.2f}%"
+        },
+        "hcmrlm": {
+            "execution_time": f"{hcmrlm_benchmark['avg_execution_time']:.6f} seconds",
+            "cpu_usage": f"{hcmrlm_benchmark['avg_cpu_usage']:.2f}%"
+        }
+    }
+
+    return render_template('compare.html', performance=performance)
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
