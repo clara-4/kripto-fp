@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare PRNG Performance</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; }
+        h1 { text-align: center; color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #5cb85c; color: white; }
+        .btn-back { margin-top: 20px; padding: 10px; background-color: #007bff; color: white; text-align: center; text-decoration: none; display: block; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Compare PRNG Performance</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Algorithm</th>
+                    <th>Execution Time</th>
+                    <th>CPU Usage</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>RCTM</td>
+                    <td>{{ performance.rctm.execution_time }}</td>
+                    <td>{{ performance.rctm.cpu_usage }}</td>
+                </tr>
+                <tr>
+                    <td>HC-MRLM</td>
+                    <td>{{ performance.hcmrlm.execution_time }}</td>
+                    <td>{{ performance.hcmrlm.cpu_usage }}</td>
+                </tr>
+            </tbody>
+        </table>        
+        <a href="/" class="btn-back">Back to Home</a>
+    </div>
+</body>
+</html>
