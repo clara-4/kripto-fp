@@ -12,32 +12,48 @@
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background-color: #5cb85c; color: white; }
         .btn-back { margin-top: 20px; padding: 10px; background-color: #007bff; color: white; text-align: center; text-decoration: none; display: block; border-radius: 5px; }
+        .logs { margin-top: 20px; }
+        .logs pre { background-color: #f9f9f9; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .log-section { margin-bottom: 10px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Compare PRNG Performance</h1>
+        
+        <!-- Tabel rata-rata keseluruhan -->
         <table>
             <thead>
                 <tr>
                     <th>Algorithm</th>
-                    <th>Execution Time</th>
-                    <th>CPU Usage</th>
+                    <th>Average Execution Time</th>
+                    <th>Average CPU Usage</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td>RCTM</td>
-                    <td>{{ performance.rctm.execution_time }}</td>
-                    <td>{{ performance.rctm.cpu_usage }}</td>
+                    <td>{{ averages.RCTM.avg_execution_time | round(6) }}s</td>
+                    <td>{{ averages.RCTM.avg_cpu_usage | round(3) }}%</td>
                 </tr>
                 <tr>
-                    <td>HC-MRLM</td>
-                    <td>{{ performance.hcmrlm.execution_time }}</td>
-                    <td>{{ performance.hcmrlm.cpu_usage }}</td>
+                    <td>HC_MRLM</td>
+                    <td>{{ averages.HC_MRLM.avg_execution_time | round(6) }}s</td>
+                    <td>{{ averages.HC_MRLM.avg_cpu_usage | round(3) }}%</td>
                 </tr>
             </tbody>
-        </table>        
+        </table>
+
+        <!-- Log section selang-seling -->
+        <div class="logs">
+            <h2>Log Entries</h2>
+            <pre>
+{% for log in log_entries %}
+{{ log }}
+{% endfor %}
+            </pre>
+        </div>
+
         <a href="/" class="btn-back">Back to Home</a>
     </div>
 </body>
