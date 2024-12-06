@@ -3,9 +3,8 @@ import random
 import secrets
 import logging
 
-import time
-import psutil
 import numpy as np
+import psutil
 from timeit import timeit
 
 
@@ -51,14 +50,6 @@ def prng_hcmrlm(seed, count, gamma=31):
         results.append(int(x * (2**31 - 1)))
     return results
 
-# Fungsi untuk menghasilkan bilangan prima dari PRNG
-def generate_prime_from_prng(prng_function, seed, count):
-    numbers = prng_function(seed, count)
-    for num in numbers:
-        if is_prime(num) and num > 1:
-            return num
-    raise ValueError("Tidak ada bilangan prima yang ditemukan dalam hasil PRNG.")
-
 # Fungsi untuk memeriksa bilangan prima
 def is_prime(num):
     if num < 2:
@@ -67,6 +58,14 @@ def is_prime(num):
         if num % i == 0:
             return False
     return True
+
+# Fungsi untuk menghasilkan bilangan prima dari PRNG
+def generate_prime_from_prng(prng_function, seed, count):
+    numbers = prng_function(seed, count)
+    for num in numbers:
+        if is_prime(num) and num > 1:
+            return num
+    raise ValueError("Tidak ada bilangan prima yang ditemukan dalam hasil PRNG.")
 
 # Fungsi untuk menghasilkan kunci RSA
 def generate_rsa_keys_with_prng(prng_function, seed):
@@ -112,7 +111,7 @@ def benchmark_prng_with_timeit(prng_function, seed, iterations, count):
     execution_times = []
     cpu_usages = []
 
-    for _ in range(iterations):
+    for i in range(iterations):
         # Awal pengukuran CPU
         cpu_start = psutil.cpu_percent(interval=None)
 
@@ -121,27 +120,23 @@ def benchmark_prng_with_timeit(prng_function, seed, iterations, count):
 
         # Akhir pengukuran CPU
         cpu_end = psutil.cpu_percent(interval=None)
-        cpu_usage = cpu_end - cpu_start
+        cpu_usage = max(cpu_end - cpu_start, 0)  # Hindari nilai negatif
 
         # Simpan hasil
         execution_times.append(exec_time)
         cpu_usages.append(cpu_usage)
 
+        # Logging per iterasi
+        logging.info(f'Iterasi {i + 1}: {prng_function.__name__} count {count} -> Time: {exec_time:.6f}s, CPU: {cpu_usage:.2f}%')
+
     # Statistik waktu eksekusi
     avg_execution_time = np.mean(execution_times)
-    std_execution_time = np.std(execution_times)
-
-    # Statistik penggunaan CPU
     avg_cpu_usage = np.mean(cpu_usages)
-    std_cpu_usage = np.std(cpu_usages)
 
     return {
         "avg_execution_time": avg_execution_time,
-        "std_execution_time": std_execution_time,
-        "avg_cpu_usage": avg_cpu_usage,
-        "std_cpu_usage": std_cpu_usage
+        "avg_cpu_usage": avg_cpu_usage
     }
-
 
 @app.route('/')
 def home():
@@ -215,28 +210,61 @@ def validate_token_hcmrlm():
 def compare_prng():
     rctm_seed = 12345
     hcmrlm_seed = 67890
-    iterations = 1000  # Jumlah iterasi benchmark
-    count = 5000      # Banyaknya bilangan yang dihasilkan per iterasi
+    max_count = 1000  # Maksimum count
+    step = 10         # Kelipatan count
+    iterations = 100  # Iterasi per count
 
-    # Benchmark untuk RCTM
-    rctm_benchmark = benchmark_prng_with_timeit(prng_rctm, rctm_seed, iterations, count)
-    # Benchmark untuk HC-MRLM
-    hcmrlm_benchmark = benchmark_prng_with_timeit(prng_hcmrlm, hcmrlm_seed, iterations, count)
+    # Hasil benchmark dan log
+    results = {}
+    log_entries = []
 
-    # Data untuk template
-    performance = {
-        "rctm": {
-            "execution_time": f"{rctm_benchmark['avg_execution_time']:.6f} seconds",
-            "cpu_usage": f"{rctm_benchmark['avg_cpu_usage']:.2f}%"
-        },
-        "hcmrlm": {
-            "execution_time": f"{hcmrlm_benchmark['avg_execution_time']:.6f} seconds",
-            "cpu_usage": f"{hcmrlm_benchmark['avg_cpu_usage']:.2f}%"
+    total_rctm_time = 0
+    total_rctm_cpu = 0
+    total_hcmrlm_time = 0
+    total_hcmrlm_cpu = 0
+    total_counts = 0
+
+    # Benchmark untuk setiap kelipatan count
+    for count in range(step, max_count + step, step):
+        rctm_result = benchmark_prng_with_timeit(prng_rctm, rctm_seed, iterations, count)
+        hcmrlm_result = benchmark_prng_with_timeit(prng_hcmrlm, hcmrlm_seed, iterations, count)
+
+        # Simpan hasil untuk rendering di tabel
+        results[count] = {
+            "RCTM": rctm_result,
+            "HC_MRLM": hcmrlm_result
         }
+
+        # Tambahkan log selang-seling
+        log_entries.append(
+            f"RCTM (Count {count}): {rctm_result['avg_execution_time']:.3e}s, "
+            f"CPU: {rctm_result['avg_cpu_usage']:.3f}%"
+        )
+        log_entries.append(
+            f"HC_MRLM (Count {count}): {hcmrlm_result['avg_execution_time']:.3e}s, "
+            f"CPU: {hcmrlm_result['avg_cpu_usage']:.3f}%"
+        )
+
+        # Akumulasi rata-rata
+        total_rctm_time += rctm_result["avg_execution_time"]
+        total_rctm_cpu += rctm_result["avg_cpu_usage"]
+        total_hcmrlm_time += hcmrlm_result["avg_execution_time"]
+        total_hcmrlm_cpu += hcmrlm_result["avg_cpu_usage"]
+        total_counts += 1
+
+    # Hitung rata-rata keseluruhan
+    averages = {
+        "RCTM": {
+            "avg_execution_time": total_rctm_time / total_counts,
+            "avg_cpu_usage": total_rctm_cpu / total_counts,
+        },
+        "HC_MRLM": {
+            "avg_execution_time": total_hcmrlm_time / total_counts,
+            "avg_cpu_usage": total_hcmrlm_cpu / total_counts,
+        },
     }
 
-    return render_template('compare.html', performance=performance)
-
+    return render_template('compare.html', averages=averages, log_entries=log_entries)
 
 
 if __name__ == '__main__':
