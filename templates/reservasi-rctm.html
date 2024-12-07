@@ -73,12 +73,18 @@
             background-color: #21618c;
         }
 
-        /* Style untuk token */
-        p {
+        /* Style untuk kotak token */
+        .token-box {
             margin-top: 20px;
-            color: #27ae60;
+            padding: 15px;
+            background-color: #e8f5e9;
+            border: 1px solid #27ae60;
+            border-radius: 5px;
+            color: #2e7d32;
             font-weight: bold;
             text-align: center;
+            max-width: 400px;
+            word-wrap: break-word; /* Untuk memecah token panjang */
         }
 
         /* Style untuk link */
@@ -109,7 +115,9 @@
         <button type="submit">Reservasi</button>
     </form>
     {% if token %}
-    <p>Token Anda: {{ token }}</p>
+    <div class="token-box">
+        Token Anda: {{ token }}
+    </div>
     <a href="/token-rctm">Validasi Token</a>
     {% endif %}
 </body>

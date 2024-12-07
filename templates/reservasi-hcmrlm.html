@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reservasi - hcmrlm</title>
+    <title>Reservasi - HCMRLM</title>
     <style>
         /* Style untuk body */
         body {
@@ -71,12 +71,18 @@
             background-color: #0056b3;
         }
 
-        /* Style untuk token */
-        p {
+        /* Style untuk kotak token */
+        .token-box {
             margin-top: 20px;
-            color: #28a745;
+            padding: 15px;
+            background-color: #e9f7ef;
+            border: 1px solid #28a745;
+            border-radius: 5px;
+            color: #155724;
             font-weight: bold;
             text-align: center;
+            max-width: 400px;
+            word-wrap: break-word; /* Untuk memecah kata panjang */
         }
 
         /* Style untuk link */
@@ -106,7 +112,9 @@
         <button type="submit">Reservasi</button>
     </form>
     {% if token %}
-    <p>Token Anda: {{ token }}</p>
+    <div class="token-box">
+        Token Anda: {{ token }}
+    </div>
     <a href="/token-hcmrlm">Validasi Token</a>
     {% endif %}
 </body>
