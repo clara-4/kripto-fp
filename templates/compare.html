@@ -4,17 +4,84 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Compare PRNG Performance</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
-        .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; }
-        h1 { text-align: center; color: #333; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #5cb85c; color: white; }
-        .btn-back { margin-top: 20px; padding: 10px; background-color: #007bff; color: white; text-align: center; text-decoration: none; display: block; border-radius: 5px; }
-        .logs { margin-top: 20px; }
-        .logs pre { background-color: #f9f9f9; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
-        .log-section { margin-bottom: 10px; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            font-size: 24px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 16px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #5cb85c;
+            color: white;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        td {
+            color: #555;
+        }
+        .btn-back {
+            margin-top: 30px;
+            padding: 12px 20px;
+            background-color: #007bff;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .btn-back:hover {
+            background-color: #0056b3;
+        }
+        .logs {
+            margin-top: 30px;
+        }
+        .logs h2 {
+            color: #333;
+            font-size: 20px;
+        }
+        .logs pre {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            max-height: 300px;
+        }
+        .chart-container {
+            margin-top: 40px;
+        }
     </style>
 </head>
 <body>
@@ -44,7 +111,18 @@
             </tbody>
         </table>
 
-        <!-- Log section selang-seling -->
+        <!-- Grafik -->
+        <div class="chart-container">
+            <h2>Execution Time Comparison</h2>
+            <canvas id="executionChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h2>CPU Usage Comparison</h2>
+            <canvas id="cpuChart"></canvas>
+        </div>
+
+
         <div class="logs">
             <h2>Log Entries</h2>
             <pre>
@@ -56,5 +134,88 @@
 
         <a href="/" class="btn-back">Back to Home</a>
     </div>
+
+
+
+    <script>
+        // Data untuk grafik Execution Time
+        const executionLabels = ['RCTM', 'HC_MRLM'];
+        const executionTimes = [
+            {{ averages.RCTM.avg_execution_time | round(6) }},
+            {{ averages.HC_MRLM.avg_execution_time | round(6) }}
+        ];
+
+        // Data untuk grafik CPU Usage
+        const cpuUsage = [
+            {{ averages.RCTM.avg_cpu_usage | round(3) }},
+            {{ averages.HC_MRLM.avg_cpu_usage | round(3) }}
+        ];
+
+        // Grafik Execution Time
+        const executionCtx = document.getElementById('executionChart').getContext('2d');
+        new Chart(executionCtx, {
+            type: 'bar',
+            data: {
+                labels: executionLabels,
+                datasets: [{
+                    label: 'Execution Time (s)',
+                    data: executionTimes,
+                    backgroundColor: ['#5cb85c', '#007bff'],
+                    borderColor: ['#4cae4c', '#0056b3'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Average Execution Time per Algorithm'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Grafik CPU Usage
+        const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+        new Chart(cpuCtx, {
+            type: 'bar',
+            data: {
+                labels: executionLabels,
+                datasets: [{
+                    label: 'CPU Usage (%)',
+                    data: cpuUsage,
+                    backgroundColor: ['#ff7f0e', '#1f77b4'],
+                    borderColor: ['#e67e22', '#3498db'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Average CPU Usage per Algorithm'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
 </body>
 </html>
